@@ -1,12 +1,50 @@
 # Meme Similarity Finder
 
 This project allows users to find similar memes for a given input meme image using Weaviate vector database. The system first requires training the AI model by passing a set of memes to the database. Once trained, users can provide an image as input, and the code will return similar memes based on the provided image.
+For proof of concept repo includes test set of img, and one result image returned by trained model when sample img provided.
 
 ## Setup
 
 ### Prerequisites
 - Docker
 - Node.js
+
+## Additional Steps
+
+### Adding Docker Compose Support
+If you prefer using Docker Compose for managing containers, you can create a `docker-compose.yml` file with the following contents:
+```yaml
+version: '3.4'
+services:
+  weaviate:
+    command:
+    - --host
+    - 0.0.0.0
+    - --port
+    - '8080'
+    - --scheme
+    - http
+    image: semitechnologies/weaviate:1.19.6
+    ports:
+    - 8080:8080
+    restart: on-failure:0
+    environment:
+      IMAGE_INFERENCE_API: 'http://i2v-neural:8080'
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'img2vec-neural'
+      ENABLE_MODULES: 'img2vec-neural'
+      CLUSTER_HOSTNAME: 'node1'
+  i2v-neural:
+    image: semitechnologies/img2vec-pytorch:resnet50
+    environment:
+      ENABLE_CUDA: '0'
+```
+Then, you can start both the Weaviate container and the Node.js script using the following command:
+```
+docker-compose up -d
+```
 
 ### 1. Clone the Repository
 ```
@@ -16,7 +54,8 @@ cd repository
 
 ### 2. Start Weaviate Vector Database Docker Container
 ```
-docker run -d --name weaviate -p 8080:8080 semitechnologies/weaviate
+curl -o docker-compose.yml <link to container from Weaviate webpage>
+docker-compose up -d
 ```
 This command will pull the Weaviate Docker image and start a container named `weaviate` on port `8080`.
 
@@ -31,29 +70,13 @@ Refer to the Weaviate documentation or your specific implementation for detailed
 
 ### 4. Start the Node.js Script
 ```
-npm install
+npm init -y
+npm i weaviate-ts-client
 node script.js
 ```
 This will install the required dependencies and run the Node.js script, which will prompt the user to provide an image as input and return similar memes based on the input image.
 
 Make sure to update the `script.js` file with the necessary code to connect to the Weaviate database and perform similarity queries.
-
-## Additional Steps
-
-### Adding Docker Compose Support
-If you prefer using Docker Compose for managing containers, you can create a `docker-compose.yml` file with the following contents:
-```yaml
-version: '3'
-services:
-  weaviate:
-    image: semitechnologies/weaviate
-    ports:
-      - 8080:8080
-```
-Then, you can start both the Weaviate container and the Node.js script using the following command:
-```
-docker-compose up -d
-```
 
 ### Enhancing the User Interface
 To provide a more user-friendly interface for interacting with the system, you can consider building a web application using frameworks like Express.js or React.js. This would allow users to upload an image through a browser interface and receive the results directly.
