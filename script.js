@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { readFileSync, writeFileSync, promises } from 'fs'
 import weaviate from 'weaviate-ts-client';
 
 // connect to db client
@@ -46,23 +46,28 @@ const createDBSchema = async () => {
 
 // store img to db - no loop, invoke for every meme in img folder
 const storeImgInDB = async () => {
-    const img = readFileSync('./img/guy.jpg'),
-        b64 = Buffer.from(img).toString('base64');
+    const dir = await promises.opendir('./img/');
 
-    await client.data.creator()
-        .withClassName('Meme')
-        .withProperties({
-            image: b64,
-            text: 'guy meme'
-        })
-        .do();
+    for await (const dirent of dir) {
+        const file = readFileSync(`./img/${dirent.name}`),
+            image = Buffer.from(file).toString('base64'),
+            text = `${dirent.name.split('.').slice(0, -1).join('.')} meme`;
 
-    console.log('img saved!');
+        await client.data.creator()
+            .withClassName('Meme')
+            .withProperties({
+                image,
+                text
+            })
+            .do();
+
+        console.log(`${dirent.name} img saved!`);
+    }
 };
 
 const findSimilarMeme = async () => {
     const inputImgame = 'aMEPeB1_460s.jpg',
-        inputImgBase = Buffer.from(readFileSync(`./img/${inputImgame}`)).toString('base64'),
+        inputImgBase = Buffer.from(readFileSync(`./input/${inputImgame}`)).toString('base64'),
         resImage = await client.graphql.get()
             .withClassName('Meme')
             .withFields(['image'])
@@ -81,9 +86,9 @@ const findSimilarMeme = async () => {
 const liveChecker = await client.misc.liveChecker().do();
 
 if (liveChecker) {
-    //createDBSchema();
+    createDBSchema();
     // storeImgInDB();
-    findSimilarMeme();
+    // findSimilarMeme();
 } else {
     console.error('db is not running');
 }
